@@ -111,7 +111,7 @@ fn main() -> ! {
     }
 
     impl slint::platform::Platform for MyPlatform {
-        fn create_window_adapter(&self) -> alloc::rc::Rc<dyn slint::re_exports::WindowAdapter> {
+        fn create_window_adapter(&self) -> alloc::rc::Rc<dyn slint::platform::WindowAdapter> {
             self.window.clone()
         }
         fn duration_since_start(&self) -> core::time::Duration {
