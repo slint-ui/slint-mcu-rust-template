@@ -98,7 +98,7 @@ fn main() -> ! {
             .unwrap();
 
     // -------- Setup the Slint backend --------
-    let window = slint::platform::swrenderer::MinimalSoftwareWindow::new();
+    let window = slint::platform::software_renderer::MinimalSoftwareWindow::new();
     slint::platform::set_platform(alloc::boxed::Box::new(MyPlatform {
         window: window.clone(),
         timer,
@@ -106,7 +106,7 @@ fn main() -> ! {
     .unwrap();
 
     struct MyPlatform {
-        window: alloc::rc::Rc<slint::platform::swrenderer::MinimalSoftwareWindow<1>>,
+        window: alloc::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow<1>>,
         timer: hal::Timer,
     }
 
@@ -124,7 +124,7 @@ fn main() -> ! {
     let _ui = create_slint_app();
 
     // -------- Event loop --------
-    let mut line = [slint::platform::swrenderer::Rgb565Pixel(0); 320];
+    let mut line = [slint::platform::software_renderer::Rgb565Pixel(0); 320];
     let mut last_touch = None;
     loop {
         slint::platform::update_timers_and_animations();
@@ -132,12 +132,12 @@ fn main() -> ! {
             use embedded_graphics_core::prelude::*;
             struct DisplayWrapper<'a, T>(
                 &'a mut T,
-                &'a mut [slint::platform::swrenderer::Rgb565Pixel],
+                &'a mut [slint::platform::software_renderer::Rgb565Pixel],
             );
             impl<T: DrawTarget<Color = embedded_graphics_core::pixelcolor::Rgb565>>
-                slint::platform::swrenderer::LineBufferProvider for DisplayWrapper<'_, T>
+                slint::platform::software_renderer::LineBufferProvider for DisplayWrapper<'_, T>
             {
-                type TargetPixel = slint::platform::swrenderer::Rgb565Pixel;
+                type TargetPixel = slint::platform::software_renderer::Rgb565Pixel;
                 fn process_line(
                     &mut self,
                     line: usize,
