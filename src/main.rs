@@ -78,15 +78,12 @@ fn main() -> ! {
     );
     let spi = shared_bus::BusManagerSimple::new(spi);
 
+    let bl = pins.gpio13.into_push_pull_output();
     let rst = pins.gpio15.into_push_pull_output();
     let dc = pins.gpio8.into_push_pull_output();
     let cs = pins.gpio9.into_push_pull_output();
     let di = display_interface_spi::SPIInterface::new(spi.acquire_spi(), dc, cs);
-    let mut display = st7789::ST7789::new(di, rst, 320, 240);
-
-    // Turn on backlight
-    let mut bl = pins.gpio13.into_push_pull_output();
-    bl.set_high().unwrap();
+    let mut display = st7789::ST7789::new(di, Some(rst), Some(bl), 320, 240);
 
     display.init(&mut delay).unwrap();
     display.set_orientation(st7789::Orientation::Landscape).unwrap();
