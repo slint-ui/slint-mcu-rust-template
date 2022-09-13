@@ -1,18 +1,18 @@
-# Slint bare metal MCU Rust Template
+# Slint Bare Metal Microcontroller Rust Template
 
-A template for a Rust MCU application that's using [Slint](https://slint-ui.com) for the user interface.
+A template for a Rust Microcontroller(MCU) application that's using [Slint](https://slint-ui.com) for the user interface.
 
 ## About
 
-This template helps you get started developing bare metal MCU Rust application with Slint as toolkit for the user interface.
-It shows how to implement `slint::platform::Platform`, and put some simple `.slint` on the screen.
+This template helps you get started developing a bare metal MCU Rust application with Slint as toolkit for the user interface.
+It shows how to implement the `slint::platform::Platform` trait, and displays a simple `.slint` design on the screen.
 
-For a template about using Slint with a normal OS (Desktop, or Embedded Linux), check the
-classic template at https://github.com/slint-ui/slint-rust-template
+For a template about using Slint with an operating system (Desktop, or Embedded Linux), check out the
+classic template at https://github.com/slint-ui/slint-rust-template.
 
 ## Usage
 
-1. Install *Nightly** Rust by following the [Rust Getting Started Guide](https://www.rust-lang.org/learn/get-started).
+1. Install **Nightly** Rust by following the [Rust Getting Started Guide](https://www.rust-lang.org/learn/get-started).
    Once this is done, you should have the ```rustc``` compiler and the ```cargo``` build system installed in your path.
 2. Install [`cargo-generate`](https://github.com/cargo-generate/cargo-generate)
     ```
