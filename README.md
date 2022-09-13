@@ -27,7 +27,7 @@ classic template at https://github.com/slint-ui/slint-rust-template.
     ```
     cargo run --features simulator
     ```
-4. If you have a RaspberryPi pico with the right screen, run on the device with
+4. If you have a [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) with a [2.8 inch Waveshare Touch Screen](https://www.waveshare.com/pico-restouch-lcd-2.8.htm), run on the device with
     ```
     cargo +nightly build --target=thumbv6m-none-eabi --features=pico --release && elf2uf2-rs -d target/thumbv6m-none-eabi/release/project-name
     ```
