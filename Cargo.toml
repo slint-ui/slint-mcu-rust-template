@@ -8,7 +8,7 @@ build = "build.rs"
 
 
 [dependencies]
-slint = { git = "https://github.com/slint-ui/slint", version = "0.3.0", default-features = false, features = ["compat-0-3-0"] }
+slint = { version = "0.3.0", default-features = false, features = ["compat-0-3-0"] }
 
 # for the rp-pico, replace by the hal for your crate
 rp-pico = { version = "0.5", optional = true }
@@ -24,7 +24,7 @@ embedded-hal = {version = "0.2.7", optional = true }
 fugit = { version = "0.3.6", optional = true }
 
 [build-dependencies]
-slint-build = { git = "https://github.com/slint-ui/slint", version = "0.3.0" }
+slint-build = { version = "0.3.0" }
 
 
 [features]
