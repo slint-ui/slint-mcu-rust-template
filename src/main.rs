@@ -1,5 +1,4 @@
 #![no_std]
-#![cfg_attr(not(feature = "simulator"), feature(default_alloc_error_handler))]
 #![cfg_attr(not(feature = "simulator"), no_main)]
 
 extern crate alloc;
