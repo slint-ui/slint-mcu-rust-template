@@ -25,13 +25,12 @@ fn main() {
 #[rp_pico::entry]
 fn main() -> ! {
     // Pull in any important traits
-    use embedded_hal::digital::v2::OutputPin;
     use fugit::RateExtU32;
     use panic_halt as _;
     use rp_pico::hal;
     use rp_pico::hal::pac;
     use rp_pico::hal::prelude::*;
-    use slint::WindowEvent;
+    use slint::platform::WindowEvent;
 
     // -------- Setup Allocator --------
     const HEAP_SIZE: usize = 200 * 1024;
@@ -160,7 +159,7 @@ fn main() -> ! {
         });
 
         // handle touch event
-        let button = slint::PointerEventButton::Left;
+        let button = slint::platform::PointerEventButton::Left;
         if let Some(event) = touch
             .read()
             .map_err(|_| ())
