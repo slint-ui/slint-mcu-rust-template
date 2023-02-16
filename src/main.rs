@@ -6,7 +6,7 @@ extern crate alloc;
 slint::include_modules!();
 
 fn create_slint_app() -> AppWindow {
-    let ui = AppWindow::new();
+    let ui = AppWindow::new().expect("Failed to load UI");
 
     let ui_handle = ui.as_weak();
     ui.on_request_increase_value(move || {
@@ -17,8 +17,8 @@ fn create_slint_app() -> AppWindow {
 }
 
 #[cfg(feature = "simulator")]
-fn main() {
-    create_slint_app().run();
+fn main() -> Result<(), slint::PlatformError> {
+    create_slint_app().run()
 }
 
 #[cfg(not(feature = "simulator"))]
@@ -93,7 +93,7 @@ fn main() -> ! {
             .unwrap();
 
     // -------- Setup the Slint backend --------
-    let window = slint::platform::software_renderer::MinimalSoftwareWindow::new();
+    let window = slint::platform::software_renderer::MinimalSoftwareWindow::new(Default::default());
     slint::platform::set_platform(alloc::boxed::Box::new(MyPlatform {
         window: window.clone(),
         timer,
@@ -101,13 +101,13 @@ fn main() -> ! {
     .unwrap();
 
     struct MyPlatform {
-        window: alloc::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow<1>>,
+        window: alloc::rc::Rc<slint::platform::software_renderer::MinimalSoftwareWindow>,
         timer: hal::Timer,
     }
 
     impl slint::platform::Platform for MyPlatform {
-        fn create_window_adapter(&self) -> alloc::rc::Rc<dyn slint::platform::WindowAdapter> {
-            self.window.clone()
+        fn create_window_adapter(&self) -> Result<alloc::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
+            Ok(self.window.clone())
         }
         fn duration_since_start(&self) -> core::time::Duration {
             core::time::Duration::from_micros(self.timer.get_counter())
