@@ -36,7 +36,7 @@ fn main() -> ! {
     const HEAP_SIZE: usize = 200 * 1024;
     static mut HEAP: [u8; HEAP_SIZE] = [0; HEAP_SIZE];
     #[global_allocator]
-    static ALLOCATOR: alloc_cortex_m::CortexMHeap = alloc_cortex_m::CortexMHeap::empty();
+    static ALLOCATOR: embedded_alloc::Heap = embedded_alloc::Heap::empty();
     unsafe { ALLOCATOR.init(&mut HEAP as *const u8 as usize, core::mem::size_of_val(&HEAP)) };
 
     // -------- Setup peripherials --------
