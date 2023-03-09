@@ -12,13 +12,11 @@ classic template at https://github.com/slint-ui/slint-rust-template.
 
 ## Usage
 
-1. Install **Nightly** Rust by following the [Rust Getting Started Guide](https://www.rust-lang.org/learn/get-started).
-   Once this is done, you should have the ```rustc``` compiler and the ```cargo``` build system installed in your path.
-2. Install [`cargo-generate`](https://github.com/cargo-generate/cargo-generate)
+1. Install [`cargo-generate`](https://github.com/cargo-generate/cargo-generate)
     ```
     cargo install cargo-generate
     ```
-3. Set up a sample project with this template
+2. Set up a sample project with this template
     ```
     cargo generate --git https://github.com/slint-ui/slint-mcu-rust-template --name my-project
     cd my-project
@@ -29,7 +27,7 @@ classic template at https://github.com/slint-ui/slint-rust-template.
     ```
 4. If you have a [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) with a [2.8 inch Waveshare Touch Screen](https://www.waveshare.com/pico-restouch-lcd-2.8.htm), run on the device with
     ```
-    cargo +nightly build --target=thumbv6m-none-eabi --features=pico --release && elf2uf2-rs -d target/thumbv6m-none-eabi/release/project-name
+    cargo build --target=thumbv6m-none-eabi --features=pico --release && elf2uf2-rs -d target/thumbv6m-none-eabi/release/project-name
     ```
 
 In order to port to your device, you will have to replace all the code that is specific to the RaspberryPi Pico.
