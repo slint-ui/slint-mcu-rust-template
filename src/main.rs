@@ -144,6 +144,9 @@ fn main() -> ! {
                         Size::new(range.len() as _, 1),
                     );
                     render_fn(&mut self.1[range.clone()]);
+                    // NOTE! this is not an efficient way to send pixel to the screen, but it is kept simple on this template.
+                    // It would be much faster to use the DMA to send pixel in parallel.
+                    // See the example in https://github.com/slint-ui/slint/blob/master/examples/mcu-board-support/pico_st7789.rs 
                     self.0
                         .fill_contiguous(
                             &rect,
