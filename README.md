@@ -25,10 +25,17 @@ classic template at https://github.com/slint-ui/slint-rust-template.
     ```
     cargo run --features simulator
     ```
-4. If you have a [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) with a [2.8 inch Waveshare Touch Screen](https://www.waveshare.com/pico-restouch-lcd-2.8.htm), run on the device with
-    ```
-    cargo build --target=thumbv6m-none-eabi --features=pico --release && elf2uf2-rs -d target/thumbv6m-none-eabi/release/project-name
-    ```
+4. If you have a [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) with a [2.8 inch Waveshare Touch Screen](https://www.waveshare.com/pico-restouch-lcd-2.8.htm):
+
+   a. Install the cargo extension to create UF2 images for the RP2040 USB Bootloader
+      ```
+      cargo install elf2uf2-rs --locked
+      ```
+
+   b. Run on the device
+      ```
+      cargo run --target=thumbv6m-none-eabi --features=pico --release
+      ```
 
 In order to port to your device, you will have to replace all the code that is specific to the RaspberryPi Pico.
 See also the instructions on https://slint-ui.com/snapshots/master/docs/rust/slint/docs/mcu/index.html
