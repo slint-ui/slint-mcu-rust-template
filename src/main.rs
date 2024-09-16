@@ -94,6 +94,7 @@ fn main() -> ! {
 
     // -------- Setup the Slint backend --------
     let window = slint::platform::software_renderer::MinimalSoftwareWindow::new(Default::default());
+    window.set_size(slint::PhysicalSize::new(320, 240));
     slint::platform::set_platform(alloc::boxed::Box::new(MyPlatform {
         window: window.clone(),
         timer,
