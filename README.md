@@ -12,13 +12,10 @@ classic template at https://github.com/slint-ui/slint-rust-template.
 
 ## Usage
 
-1. Install [`cargo-generate`](https://github.com/cargo-generate/cargo-generate)
+1. Download and extract the [ZIP archive of this repository](https://github.com/slint-ui/slint-mcu-rust-template/archive/refs/heads/main.zip).
+2. Rename the extracted directory and change into it:
     ```
-    cargo install cargo-generate
-    ```
-2. Set up a sample project with this template
-    ```
-    cargo generate --git https://github.com/slint-ui/slint-mcu-rust-template --name my-project
+    mv slint-mcu-rust-template-main my-project
     cd my-project
     ```
 3. Run on the Desktop (Simulator)
@@ -44,3 +41,5 @@ See also the instructions on https://slint-ui.com/snapshots/master/docs/rust/sli
 
 We hope that this template helps you get started and you enjoy exploring making user interfaces with Slint. To learn more
 about the Slint APIs and the `.slint` markup language check out our [online documentation](https://slint-ui.com/docs/rust/slint/).
+
+Don't forget to edit this readme to replace it by yours, and edit the `name =` field in `Cargo.toml` to match the name of your project.
