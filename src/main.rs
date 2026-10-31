@@ -25,7 +25,7 @@ fn main() -> Result<(), slint::PlatformError> {
 #[rp_pico::entry]
 fn main() -> ! {
     // Pull in any important traits
-    use fugit::RateExtU32;
+    use embedded_hal::digital::OutputPin;
     use panic_halt as _;
     use rp_pico::hal;
     use rp_pico::hal::pac;
@@ -36,12 +36,11 @@ fn main() -> ! {
     const HEAP_SIZE: usize = 200 * 1024;
     static mut HEAP: [u8; HEAP_SIZE] = [0; HEAP_SIZE];
     #[global_allocator]
-    static ALLOCATOR: embedded_alloc::Heap = embedded_alloc::Heap::empty();
+    static ALLOCATOR: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
     unsafe { ALLOCATOR.init(core::ptr::addr_of_mut!(HEAP) as usize, HEAP_SIZE) }
 
     // -------- Setup peripherials --------
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = hal::watchdog::Watchdog::new(pac.WATCHDOG);
 
     let clocks = hal::clocks::init_clocks_and_plls(
@@ -56,41 +55,49 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().raw());
-
     let sio = hal::sio::Sio::new(pac.SIO);
     let pins = rp_pico::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 
-    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS);
+    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
-    let _spi_sclk = pins.gpio10.into_mode::<hal::gpio::FunctionSpi>();
-    let _spi_mosi = pins.gpio11.into_mode::<hal::gpio::FunctionSpi>();
-    let _spi_miso = pins.gpio12.into_mode::<hal::gpio::FunctionSpi>();
+    let spi_sclk = pins.gpio10.into_function::<hal::gpio::FunctionSpi>();
+    let spi_mosi = pins.gpio11.into_function::<hal::gpio::FunctionSpi>();
+    let spi_miso = pins.gpio12.into_function::<hal::gpio::FunctionSpi>();
 
-    let spi = hal::spi::Spi::<_, _, 8>::new(pac.SPI1);
+    let spi = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (spi_mosi, spi_miso, spi_sclk));
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        62_500_000.Hz(),
-        &embedded_hal::spi::MODE_3,
+        shared_spi::DISPLAY_FREQ,
+        embedded_hal::spi::MODE_3,
     );
-    let spi = shared_bus::BusManagerSimple::new(spi);
+    // The display and the touch screen share the SPI bus.
+    let spi = cortex_m::singleton!(: shared_spi::Bus = shared_spi::Bus::new(spi)).unwrap();
 
-    let bl = pins.gpio13.into_push_pull_output();
+    let mut bl = pins.gpio13.into_push_pull_output();
     let rst = pins.gpio15.into_push_pull_output();
     let dc = pins.gpio8.into_push_pull_output();
     let cs = pins.gpio9.into_push_pull_output();
-    let di = display_interface_spi::SPIInterface::new(spi.acquire_spi(), dc, cs);
-    let mut display = st7789::ST7789::new(di, Some(rst), Some(bl), 320, 240);
-
-    display.init(&mut delay).unwrap();
-    display.set_orientation(st7789::Orientation::Landscape).unwrap();
+    let display_buffer = cortex_m::singleton!(: [u8; 512] = [0; 512]).unwrap();
+    let di = mipidsi::interface::SpiInterface::new(
+        spi.device(cs, shared_spi::DISPLAY_FREQ),
+        dc,
+        display_buffer,
+    );
+    let mut display = mipidsi::Builder::new(mipidsi::models::ST7789, di)
+        .reset_pin(rst)
+        .display_size(240, 320)
+        .orientation(mipidsi::options::Orientation::new().rotate(mipidsi::options::Rotation::Deg90))
+        .invert_colors(mipidsi::options::ColorInversion::Inverted)
+        .init(&mut timer)
+        .unwrap();
+    bl.set_high().unwrap();
 
     // touch screen
     let touch_irq = pins.gpio17.into_pull_up_input();
-    let mut touch =
-        xpt2046::XPT2046::new(touch_irq, pins.gpio16.into_push_pull_output(), spi.acquire_spi())
-            .unwrap();
+    let mut touch_cs = pins.gpio16.into_push_pull_output();
+    touch_cs.set_high().unwrap();
+    let mut touch = xpt2046::XPT2046::new(touch_irq, spi.device(touch_cs, xpt2046::SPI_FREQ));
 
     // -------- Setup the Slint backend --------
     let window = slint::platform::software_renderer::MinimalSoftwareWindow::new(Default::default());
@@ -107,11 +114,14 @@ fn main() -> ! {
     }
 
     impl slint::platform::Platform for MyPlatform {
-        fn create_window_adapter(&self) -> Result<alloc::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
+        fn create_window_adapter(
+            &self,
+        ) -> Result<alloc::rc::Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError>
+        {
             Ok(self.window.clone())
         }
         fn duration_since_start(&self) -> core::time::Duration {
-            core::time::Duration::from_micros(self.timer.get_counter())
+            core::time::Duration::from_micros(self.timer.get_counter().ticks())
         }
     }
 
@@ -147,7 +157,7 @@ fn main() -> ! {
                     render_fn(&mut self.1[range.clone()]);
                     // NOTE! this is not an efficient way to send pixel to the screen, but it is kept simple on this template.
                     // It would be much faster to use the DMA to send pixel in parallel.
-                    // See the example in https://github.com/slint-ui/slint/blob/master/examples/mcu-board-support/pico_st7789.rs 
+                    // See the example in https://github.com/slint-ui/slint/blob/master/examples/mcu-board-support/pico_st7789/pico_st7789.rs
                     self.0
                         .fill_contiguous(
                             &rect,
@@ -197,34 +207,98 @@ fn main() -> ! {
     }
 }
 
+/// Lets the display and the touch screen share the SPI bus, each with its own frequency.
+#[cfg(not(feature = "simulator"))]
+mod shared_spi {
+    use core::cell::RefCell;
+    use embedded_hal::digital::OutputPin;
+    use embedded_hal::spi::{ErrorType, Operation, SpiBus, SpiDevice};
+    use fugit::{Hertz, RateExtU32};
+    use rp_pico::hal;
+
+    // 16ns for serial clock cycle (write), page 43 of https://www.waveshare.com/w/upload/a/ae/ST7789_Datasheet.pdf
+    pub const DISPLAY_FREQ: Hertz<u32> = Hertz::<u32>::Hz(62_500_000);
+
+    type Pins = (
+        hal::gpio::Pin<hal::gpio::bank0::Gpio11, hal::gpio::FunctionSpi, hal::gpio::PullDown>,
+        hal::gpio::Pin<hal::gpio::bank0::Gpio12, hal::gpio::FunctionSpi, hal::gpio::PullDown>,
+        hal::gpio::Pin<hal::gpio::bank0::Gpio10, hal::gpio::FunctionSpi, hal::gpio::PullDown>,
+    );
+    type Spi = hal::Spi<hal::spi::Enabled, hal::pac::SPI1, Pins, 8>;
+
+    pub struct Bus(RefCell<(Spi, Hertz<u32>)>);
+
+    impl Bus {
+        pub fn new(spi: Spi) -> Self {
+            Self(RefCell::new((spi, DISPLAY_FREQ)))
+        }
+
+        pub fn device<CS: OutputPin>(&self, cs: CS, freq: Hertz<u32>) -> Device<'_, CS> {
+            Device { bus: self, cs, freq }
+        }
+    }
+
+    pub struct Device<'a, CS> {
+        bus: &'a Bus,
+        cs: CS,
+        freq: Hertz<u32>,
+    }
+
+    impl<CS> ErrorType for Device<'_, CS> {
+        type Error = <Spi as ErrorType>::Error;
+    }
+
+    impl<CS: OutputPin> SpiDevice for Device<'_, CS> {
+        fn transaction(&mut self, operations: &mut [Operation<u8>]) -> Result<(), Self::Error> {
+            let mut bus = self.bus.0.borrow_mut();
+            if bus.1 != self.freq {
+                bus.0.flush()?;
+                bus.0.set_baudrate(125_000_000u32.Hz(), self.freq);
+                bus.1 = self.freq;
+            }
+            self.cs.set_low().ok();
+            for op in operations {
+                match op {
+                    Operation::Read(words) => bus.0.read(words),
+                    Operation::Write(words) => bus.0.write(words),
+                    Operation::Transfer(read, write) => bus.0.transfer(read, write),
+                    Operation::TransferInPlace(words) => bus.0.transfer_in_place(words),
+                    Operation::DelayNs(_) => unimplemented!(),
+                }?;
+            }
+            bus.0.flush()?;
+            self.cs.set_high().ok();
+            Ok(())
+        }
+    }
+}
+
 #[cfg(not(feature = "simulator"))]
 mod xpt2046 {
-    use embedded_hal::blocking::spi::Transfer;
-    use embedded_hal::digital::v2::{InputPin, OutputPin};
-    use fugit::RateExtU32;
+    use embedded_hal::digital::InputPin;
+    use embedded_hal::spi::SpiDevice;
+    use fugit::Hertz;
 
-    pub struct XPT2046<IRQ: InputPin + 'static, CS: OutputPin, SPI: Transfer<u8>> {
+    pub const SPI_FREQ: Hertz<u32> = Hertz::<u32>::Hz(3_000_000);
+
+    pub struct XPT2046<IRQ: InputPin, SPI: SpiDevice> {
         irq: IRQ,
-        cs: CS,
         spi: SPI,
         pressed: bool,
     }
 
-    impl<PinE, IRQ: InputPin<Error = PinE>, CS: OutputPin<Error = PinE>, SPI: Transfer<u8>>
-        XPT2046<IRQ, CS, SPI>
-    {
-        pub fn new(irq: IRQ, mut cs: CS, spi: SPI) -> Result<Self, PinE> {
-            cs.set_high()?;
-            Ok(Self { irq, cs, spi, pressed: false })
+    impl<IRQ: InputPin, SPI: SpiDevice> XPT2046<IRQ, SPI> {
+        pub fn new(irq: IRQ, spi: SPI) -> Self {
+            Self { irq, spi, pressed: false }
         }
 
-        pub fn read(&mut self) -> Result<Option<(f32, f32)>, Error<PinE, SPI::Error>> {
+        pub fn read(&mut self) -> Result<Option<(f32, f32)>, Error<IRQ::Error, SPI::Error>> {
             const PRESS_THRESHOLD: i32 = -25_000;
             const RELEASE_THRESHOLD: i32 = -30_000;
             let threshold = if self.pressed { RELEASE_THRESHOLD } else { PRESS_THRESHOLD };
             self.pressed = false;
 
-            if self.irq.is_low().map_err(|e| Error::Pin(e))? {
+            if self.irq.is_low().map_err(Error::Pin)? {
                 const CMD_X_READ: u8 = 0b10010000;
                 const CMD_Y_READ: u8 = 0b11010000;
                 const CMD_Z1_READ: u8 = 0b10110000;
@@ -236,22 +310,13 @@ mod xpt2046 {
                 const MIN_Y: u32 = 2300;
                 const MAX_Y: u32 = 30300;
 
-                // FIXME! how else set the frequency to this device
-                unsafe { set_spi_freq(3_000_000u32.Hz()) };
-
-                self.cs.set_low().map_err(|e| Error::Pin(e))?;
-
                 macro_rules! xchg {
-                    ($byte:expr) => {
-                        match self
-                            .spi
-                            .transfer(&mut [$byte, 0, 0])
-                            .map_err(|e| Error::Transfer(e))?
-                        {
-                            [_, h, l] => ((*h as u32) << 8) | (*l as u32),
-                            _ => return Err(Error::InternalError),
-                        }
-                    };
+                    ($byte:expr) => {{
+                        let mut b = [0, $byte, 0, 0];
+                        self.spi.transfer_in_place(&mut b).map_err(Error::Transfer)?;
+                        let [_, _, h, l] = b;
+                        ((h as u32) << 8) | (l as u32)
+                    }};
                 }
 
                 let z1 = xchg!(CMD_Z1_READ);
@@ -259,13 +324,8 @@ mod xpt2046 {
                 let z = z1 as i32 - z2 as i32;
 
                 if z < threshold {
-                    xchg!(0);
-                    self.cs.set_high().map_err(|e| Error::Pin(e))?;
-                    unsafe { set_spi_freq(62_500_000.Hz()) };
                     return Ok(None);
                 }
-
-                xchg!(CMD_X_READ | 1); // Dummy read, first read is a outlier
 
                 let mut point = (0u32, 0u32);
                 for _ in 0..10 {
@@ -278,10 +338,6 @@ mod xpt2046 {
                 let z1 = xchg!(CMD_Z1_READ);
                 let z2 = xchg!(CMD_Z2_READ);
                 let z = z1 as i32 - z2 as i32;
-
-                xchg!(0);
-                self.cs.set_high().map_err(|e| Error::Pin(e))?;
-                unsafe { set_spi_freq(62_500_000.Hz()) };
 
                 if z < RELEASE_THRESHOLD {
                     return Ok(None);
@@ -303,13 +359,5 @@ mod xpt2046 {
     pub enum Error<PinE, TransferE> {
         Pin(PinE),
         Transfer(TransferE),
-        InternalError,
-    }
-
-    unsafe fn set_spi_freq(freq: impl Into<fugit::Hertz<u32>>) {
-        use rp_pico::hal;
-        // FIXME: the touchscreen and the LCD have different frequencies, but we cannot really set different frequencies to different SpiProxy without this hack
-        hal::spi::Spi::<_, _, 8>::new(hal::pac::Peripherals::steal().SPI1)
-            .set_baudrate(125_000_000u32.Hz(), freq);
     }
 }
