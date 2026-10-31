@@ -1,6 +1,6 @@
 # Slint Bare Metal Microcontroller Rust Template
 
-A template for a Rust Microcontroller(MCU) application that's using [Slint](https://slint-ui.com) for the user interface.
+A template for a Rust Microcontroller(MCU) application that's using [Slint](https://slint.dev) for the user interface.
 
 ## About
 
@@ -35,11 +35,11 @@ classic template at https://github.com/slint-ui/slint-rust-template.
       ```
 
 In order to port to your device, you will have to replace all the code that is specific to the RaspberryPi Pico.
-See also the instructions on https://slint-ui.com/snapshots/master/docs/rust/slint/docs/mcu/index.html
+See also the instructions on https://docs.slint.dev/latest/docs/rust/slint/docs/mcu/
 
 ## Next Steps
 
 We hope that this template helps you get started and you enjoy exploring making user interfaces with Slint. To learn more
-about the Slint APIs and the `.slint` markup language check out our [online documentation](https://slint-ui.com/docs/rust/slint/).
+about the Slint APIs and the `.slint` markup language check out our [online documentation](https://docs.slint.dev/latest/docs/rust/slint/).
 
 Don't forget to edit this readme to replace it by yours, and edit the `name =` field in `Cargo.toml` to match the name of your project.
